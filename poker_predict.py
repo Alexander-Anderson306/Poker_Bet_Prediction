@@ -244,5 +244,4 @@ def train_and_score_all_models(df):
 
 
 df = load_data('poker_analysis_results.csv')
-dfs = separate_players(df)
 train_and_score_all_models(df)
