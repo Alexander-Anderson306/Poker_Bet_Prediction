@@ -31,31 +31,26 @@ def action_semantic_features(s: str):
 
     return feats
 
-#TODO: change this encoding to be more semantic
 #function to map the hole cards to semantic values for the regression model
-def hole_cards_semantic_features(s: list):
-    if len(s) != 2:
-        #print(f"Expected 2 hole cards, got {len(s)} for {s!r}")
-        return None
+def hole_cards_to_features(cards):
+    rank_map = {
+        '2':2,'3':3,'4':4,'5':5,'6':6,
+        '7':7,'8':8,'9':9,'T':10,
+        'J':11,'Q':12,'K':13,'A':14
+    }
+    suit_map = {'h':0,'d':1,'c':2,'s':3}
 
-    def card_to_features(card):
-        rank = card[:-1]
-        suit = card[-1]
-        rank_value = {
-            '2': 2, '3': 3, '4': 4, '5': 5, '6': 6,
-            '7': 7, '8': 8, '9': 9, 'T': 10,
-            'J': 11, 'Q': 12, 'K': 13, 'A': 14
-        }.get(rank, 0)
-        suit_value = {
-            'h': 0.25,
-            'd': 0.5,
-            'c': 0.75,
-            's': 1.0
-        }.get(suit, 0)
-        return rank_value * suit_value
+    if len(cards) != 2:
+        return [None, None, None, None]
 
-    features = np.array([card_to_features(card) for card in s], dtype=np.float64)
-    return features
+    card1, card2 = cards
+
+    rank1 = rank_map[card1[:-1]]
+    suit1 = suit_map[card1[-1]]
+    rank2 = rank_map[card2[:-1]]
+    suit2 = suit_map[card2[-1]]
+
+    return [rank1, suit1, rank2, suit2]
 
 #function to load the data into a pandas dataframe and preprocess it
 def load_data(file_path):
@@ -67,8 +62,9 @@ def load_data(file_path):
     df = df[df['player'].isin(players_to_keep)].copy()
     df['hole_cards'] = df['hole_cards'].apply(ast.literal_eval)
 
-        #transform the categorical features into semantic features for the regression model
-    df['hole_cards'] = df['hole_cards'].map(hole_cards_semantic_features)
+    #transform the categorical features into semantic features for the regression model
+    df[['rank1','suit1','rank2','suit2']] = pd.DataFrame(
+    df['hole_cards'].apply(hole_cards_to_features).tolist(),index=df.index)
     df['flop_act'] = df['flop_act'].map(action_semantic_features)
     df['turn_act'] = df['turn_act'].map(action_semantic_features)
     df['river_act'] = df['river_act'].map(action_semantic_features)
@@ -76,17 +72,13 @@ def load_data(file_path):
     #drop invalid data
     df.dropna(subset=['hole_cards', 'flop_act', 'turn_act', 'river_act'], inplace=True)
 
-        #convert the values into proper list of floats for the regression model
-    hole = pd.DataFrame(df["hole_cards"].tolist(), index=df.index).add_prefix("hole_")
+    #convert the values into proper list of floats for the regression model
     flop = pd.DataFrame(df["flop_act"].tolist(), index=df.index).add_prefix("flop_")
     turn = pd.DataFrame(df["turn_act"].tolist(), index=df.index).add_prefix("turn_")
     river = pd.DataFrame(df["river_act"].tolist(), index=df.index).add_prefix("river_")
 
     df = pd.concat(
-        [df.drop(columns=["hole_cards","flop_act","turn_act","river_act"]),
-        hole, flop, turn, river],
-        axis=1
-    )
+        [df.drop(columns=["hole_cards","flop_act","turn_act","river_act"]), flop, turn, river], axis=1)
     return df
 
 #function to separate players into separate dataframes based on player id
@@ -139,7 +131,7 @@ def prepare_bet_predictor_KPCA(df, k, kernel):
 ############################################################ Card Predictor Preprecessing ############################################################
 
 def prepare_card_predictor_data(df):
-    X = df.drop(columns=['player', 'hole_0', 'hole_1', 'flop_strength', 'turn_strength', 'river_strength'])
+    X = df.drop(columns=['player', 'rank1','suit1','rank2','suit2', 'flop_strength', 'turn_strength', 'river_strength'])
     y = df['river_strength'].to_numpy()
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67)
     scaler = StandardScaler()
@@ -148,7 +140,7 @@ def prepare_card_predictor_data(df):
     return X_train, X_test, y_train, y_test
 
 def prepare_card_predictor_RFECV(df, estimator):
-    X = df.drop(columns=['player', 'hole_0', 'hole_1', 'flop_strength', 'turn_strength', 'river_strength'])
+    X = df.drop(columns=['player', 'rank1','suit1','rank2','suit2', 'flop_strength', 'turn_strength', 'river_strength'])
     feature_names = X.columns
     y = df['river_strength'].to_numpy()
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67)
@@ -164,7 +156,7 @@ def prepare_card_predictor_RFECV(df, estimator):
     return X_train, X_test, y_train, y_test, selected_features, feature_names
 
 def prepare_card_predictor_KPCA(df, k, kernel):
-    X = df.drop(columns=['player', 'hole_0', 'hole_1', 'flop_strength', 'turn_strength', 'river_strength'])
+    X = df.drop(columns=['player', 'rank1','suit1','rank2','suit2', 'flop_strength', 'turn_strength', 'river_strength'])
     y = df['river_strength'].to_numpy()
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67)
     scaler = StandardScaler()
