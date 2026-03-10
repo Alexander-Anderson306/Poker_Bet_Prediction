@@ -4,6 +4,7 @@ import ast
 from sklearn.feature_selection import RFECV
 from sklearn.decomposition import KernelPCA
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
 #function to map the action to semantic values for the regression model
 def action_semantic_features(s: str):
     _ALLOWED = set("BkbcrA")
@@ -59,11 +60,11 @@ def hole_cards_semantic_features(s: list):
 #function to load the data into a pandas dataframe and preprocess it
 def load_data(file_path):
     df = pd.read_csv(file_path)
-    df.drop(['timestamp', 'month', 'pre_category', 'is_folded_strong', 'is_bluff', 'is_set_success', 'win_amt'], axis=1, inplace=True)
-    #drop the rows where the player has played less than 10 games to ensure we have at least some data for each player
+    df.drop(['timestamp', 'month', 'pre_category', 'win_amt'], axis=1, inplace=True)
+    #drop the rows where the player has played less than 1500 games to ensure we have at least some data for each player
     player_counts = df['player'].value_counts()
     players_to_keep = player_counts[player_counts >= 1500].index
-    df = df[df['player'].isin(players_to_keep)]
+    df = df[df['player'].isin(players_to_keep)].copy()
     df['hole_cards'] = df['hole_cards'].apply(ast.literal_eval)
 
         #transform the categorical features into semantic features for the regression model
@@ -87,6 +88,7 @@ def load_data(file_path):
         axis=1
     )
     return df
+
 #function to separate players into separate dataframes based on player id
 def separate_players(df):
     player_dfs = []
@@ -98,60 +100,79 @@ def separate_players(df):
 def prepare_bet_predictor_data(df):
     X = df.drop(columns=['player', 'bet_total'])
     y = df['bet_total'].to_numpy()
-    X = StandardScaler().fit_transform(X)
-    return X, y
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67)
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+    return X_train, X_test, y_train, y_test
 
 def prepare_bet_predictor_RFECV(df, estimator):
     X = df.drop(columns=['player', 'bet_total'])
     feature_names = X.columns
     y = df['bet_total'].to_numpy()
-    X = StandardScaler().fit_transform(X)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67)
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
 
     selector = RFECV(estimator=estimator, step=1, cv=5, scoring='neg_mean_squared_error')
 
-    X_new = selector.fit_transform(X, y)
+    X_train = selector.fit_transform(X_train, y_train)
+    X_test = selector.transform(X_test)
     selected_features = feature_names[selector.get_support()]
-    return X_new, y, selected_features
+    return X_train, X_test, y_train, y_test, selected_features, feature_names
 
 def prepare_bet_predictor_KPCA(df, k, kernel):
     X = df.drop(columns=['player', 'bet_total'])
     y = df['bet_total'].to_numpy()
-    X = StandardScaler().fit_transform(X)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67)
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
 
     kpca = KernelPCA(n_components=k, kernel=kernel)
-    X_new = kpca.fit_transform(X)
+    X_train = kpca.fit_transform(X_train)
+    X_test = kpca.transform(X_test)
 
-    return X_new, y
+    return X_train, X_test, y_train, y_test
 
 ############################################################ Card Predictor Preprecessing ############################################################
 
 def prepare_card_predictor_data(df):
     X = df.drop(columns=['player', 'hole_0', 'hole_1', 'flop_strength', 'turn_strength', 'river_strength'])
     y = df['river_strength'].to_numpy()
-    X = StandardScaler().fit_transform(X)
-    return X, y
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67)
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+    return X_train, X_test, y_train, y_test
 
 def prepare_card_predictor_RFECV(df, estimator):
     X = df.drop(columns=['player', 'hole_0', 'hole_1', 'flop_strength', 'turn_strength', 'river_strength'])
     feature_names = X.columns
     y = df['river_strength'].to_numpy()
-    X = StandardScaler().fit_transform(X)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67)
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
 
     selector = RFECV(estimator=estimator, step=1, cv=5, scoring='neg_mean_squared_error')
-    X_new = selector.fit_transform(X, y)
+
+    X_train = selector.fit_transform(X_train, y_train)
+    X_test = selector.transform(X_test)
     selected_features = feature_names[selector.get_support()]
-    return X_new, y, selected_features
+    return X_train, X_test, y_train, y_test, selected_features, feature_names
 
 def prepare_card_predictor_KPCA(df, k, kernel):
     X = df.drop(columns=['player', 'hole_0', 'hole_1', 'flop_strength', 'turn_strength', 'river_strength'])
     y = df['river_strength'].to_numpy()
-    X = StandardScaler().fit_transform(X)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67)
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
 
     kpca = KernelPCA(n_components=k, kernel=kernel)
+    X_train = kpca.fit_transform(X_train)
+    X_test = kpca.transform(X_test)
 
-    X_new = kpca.fit_transform(X)
-
-    return X_new, y
-
-
-
+    return X_train, X_test, y_train, y_test

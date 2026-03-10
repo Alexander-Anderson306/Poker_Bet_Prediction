@@ -3,7 +3,7 @@ from SVR_models import *
 from data_prep import *
 
 
-df = load_data('CSVs/combined.csv')
+df = load_data('joined_table.csv')
 #train without feature selection
 train_and_score_models(df, prepare_function=prepare_bet_predictor_data, file_prefix='CSV/bet_predictor_')
 train_and_score_models(df, prepare_function=prepare_card_predictor_data, file_prefix='CSV/card_predictor_')
