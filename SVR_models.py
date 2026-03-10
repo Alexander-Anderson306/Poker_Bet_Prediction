@@ -4,8 +4,7 @@ import numpy as np
 from data_prep import separate_players
 from joblib import Parallel, delayed
 
-
-#different functions to train and score the different SVR models with different kernels and hyperparameters
+################################################################## BELOW FUNCTIONS ARE USED TO TRAIN MODELS ##################################################################
 def train_linear_kernel_svr(X_train, X_test, y_train, y_test, C, epsilon):
     model = SVR(kernel='linear', C=C, epsilon=epsilon).fit(X_train, y_train)
     return model.score(X_test, y_test)
@@ -22,6 +21,7 @@ def train_sigmoid_kernel_svr(X_train, X_test, y_train, y_test, C, epsilon):
     model = SVR(kernel='sigmoid', C=C, epsilon=epsilon).fit(X_train, y_train)
     return model.score(X_test, y_test)
 
+################################################################## BELOW FUNCTIONS PERFORM HYPER PARAMETER OPTOMIZATION ##################################################################
 def train_and_score_models(df, prepare_function, file_prefix):
     dfs = separate_players(df)
     C_Vals = [0.1, 1, 10]
@@ -53,35 +53,70 @@ def train_and_score_models(df, prepare_function, file_prefix):
                 rbf_scores[rbf_key] = []
                 max_rbf[rbf_key] = 0
 
-    for df in dfs:
+    def process_player(df):
+        linear_local = {}
+        poly_local = {}
+        rbf_local = {}
+        sigmoid_local = {}
+
+        for C in C_Vals:
+            for epsilon in epsilon_Vals:
+                key = "{},{}".format(C, epsilon)
+                linear_local[key] = []
+                sigmoid_local[key] = []
+                for degree in degree_Vals:
+                    poly_key = "{},{},{}".format(degree, C, epsilon)
+                    poly_local[poly_key] = []
+                for gamma in gamma_Vals:
+                    rbf_key = "{},{},{}".format(gamma, C, epsilon)
+                    rbf_local[rbf_key] = []
+
         X_train, X_test, y_train, y_test = prepare_function(df)
         for C in C_Vals:
             for epsilon in epsilon_Vals:
                 key = "{},{}".format(C, epsilon)
                 print(f"Training linear kernel SVR with C={C} and epsilon={epsilon} for player {df['player'].iloc[0]}")
                 acc = train_linear_kernel_svr(X_train, X_test, y_train, y_test, C, epsilon)
-                bisect.insort(linear_scores[key], acc)
-                if acc > max_linear[key]:
-                    max_linear[key] = acc
+                linear_local[key].append(acc)
 
                 for degree in degree_Vals:
                     print(f"Training polynomial kernel SVR with degree={degree}, C={C} and epsilon={epsilon} for player {df['player'].iloc[0]}")
                     poly_key = "{},{},{}".format(degree, C, epsilon)
                     acc = train_poly_kernel_svr(X_train, X_test, y_train, y_test, degree, C, epsilon)
-                    bisect.insort(poly_scores[poly_key], acc)
-                    if acc > max_poly[poly_key]:
-                        max_poly[poly_key] = acc
+                    poly_local[poly_key].append(acc)
 
                 for gamma in gamma_Vals:
                     print(f"Training RBF kernel SVR with gamma={gamma}, C={C} and epsilon={epsilon} for player {df['player'].iloc[0]}")
                     rbf_key = "{},{},{}".format(gamma, C, epsilon)
                     acc = train_rbf_kernel_svr(X_train, X_test, y_train, y_test, gamma, C, epsilon)
-                    bisect.insort(rbf_scores[rbf_key], acc)
-                    if acc > max_rbf[rbf_key]:
-                        max_rbf[rbf_key] = acc
+                    rbf_local[rbf_key].append(acc)
 
                 print(f"Training sigmoid kernel SVR with C={C} and epsilon={epsilon} for player {df['player'].iloc[0]}")
                 acc = train_sigmoid_kernel_svr(X_train, X_test, y_train, y_test, C, epsilon)
+                sigmoid_local[key].append(acc)
+
+        return linear_local, poly_local, rbf_local, sigmoid_local
+
+    results = Parallel(n_jobs=-1)(delayed(process_player)(df) for df in dfs)
+
+    for linear_local, poly_local, rbf_local, sigmoid_local in results:
+        for key in linear_local.keys():
+            for acc in linear_local[key]:
+                bisect.insort(linear_scores[key], acc)
+                if acc > max_linear[key]:
+                    max_linear[key] = acc
+        for key in poly_local.keys():
+            for acc in poly_local[key]:
+                bisect.insort(poly_scores[key], acc)
+                if acc > max_poly[key]:
+                    max_poly[key] = acc
+        for key in rbf_local.keys():
+            for acc in rbf_local[key]:
+                bisect.insort(rbf_scores[key], acc)
+                if acc > max_rbf[key]:
+                    max_rbf[key] = acc
+        for key in sigmoid_local.keys():
+            for acc in sigmoid_local[key]:
                 bisect.insort(sigmoid_scores[key], acc)
                 if acc > max_sigmoid[key]:
                     max_sigmoid[key] = acc
@@ -142,7 +177,17 @@ def train_and_score_linear_kernel_svr(df, prepare_function, file_prefix, selecto
             linear_scores[key] = []
             max_linear[key] = 0
 
-    for df in dfs:
+    def process_player(df):
+        linear_local = {}
+        selected_features_local = {}
+        feature_names_local = None
+
+        for C in C_Vals:
+            for epsilon in epsilon_Vals:
+                key = "{},{}".format(C, epsilon)
+                linear_local[key] = []
+                selected_features_local[key] = None
+
         X_train, X_test, y_train, y_test = None, None, None, None
         if(selector is None and extractor is None):
             X_train, X_test, y_train, y_test = prepare_function(df)
@@ -152,23 +197,35 @@ def train_and_score_linear_kernel_svr(df, prepare_function, file_prefix, selecto
                 if(selector is not None):
                     estimator = SVR(kernel='linear', C=C, epsilon=epsilon)
                     X_train, X_test, y_train, y_test, selected_features, current_feature_names = prepare_function(df, estimator)
-                    if feature_names is None:
-                        feature_names = list(current_feature_names)
-                        feature_name_to_index = {name: i for i, name in enumerate(feature_names)}
-                        for existing_key in linear_scores.keys():
-                            selected_features_dict[existing_key] = [0] * len(feature_names)
+                    feature_names_local = list(current_feature_names)
                 elif(extractor is not None):
                     X_train, X_test, y_train, y_test = prepare_function(df, 'linear', k)
 
                 print(f"Training linear kernel SVR with C={C} and epsilon={epsilon} for player {df['player'].iloc[0]}")
                 acc = train_linear_kernel_svr(X_train, X_test, y_train, y_test, C, epsilon)
                 key = "{},{}".format(C, epsilon)
+                linear_local[key].append(acc)
+                selected_features_local[key] = selected_features
+
+        return linear_local, selected_features_local, feature_names_local
+
+    results = Parallel(n_jobs=-1)(delayed(process_player)(df) for df in dfs)
+
+    for linear_local, selected_features_local, feature_names_local in results:
+        if feature_names is None and feature_names_local is not None:
+            feature_names = feature_names_local
+            feature_name_to_index = {name: i for i, name in enumerate(feature_names)}
+            for existing_key in linear_scores.keys():
+                selected_features_dict[existing_key] = [0] * len(feature_names)
+        for key in linear_local.keys():
+            for acc in linear_local[key]:
                 bisect.insort(linear_scores[key], acc)
                 if acc > max_linear[key]:
                     max_linear[key] = acc
-                if selected_features is not None:
-                    for feature in selected_features:
-                        selected_features_dict[key][feature_name_to_index[feature]] += 1
+            selected_features = selected_features_local[key]
+            if selected_features is not None:
+                for feature in selected_features:
+                    selected_features_dict[key][feature_name_to_index[feature]] += 1
                 
     with open(file_prefix+'svr_linear_scores.csv', 'w') as f:
         f.write('C,epsilon,avg_score,median_score,max_score,selected_features,feature_names\n')
@@ -203,7 +260,19 @@ def train_and_score_poly_kernel_svr(df, prepare_function, file_prefix, selector=
                 poly_key = "{},{},{}".format(degree, C, epsilon)
                 poly_scores[poly_key] = []
                 max_poly[poly_key] = 0
-    for df in dfs:
+
+    def process_player(df):
+        poly_local = {}
+        selected_features_local = {}
+        feature_names_local = None
+
+        for C in C_Vals:
+            for epsilon in epsilon_Vals:
+                for degree in degree_Vals:
+                    poly_key = "{},{},{}".format(degree, C, epsilon)
+                    poly_local[poly_key] = []
+                    selected_features_local[poly_key] = None
+
         X_train, X_test, y_train, y_test = None, None, None, None
         if(selector is None and extractor is None):
             X_train, X_test, y_train, y_test = prepare_function(df)
@@ -215,23 +284,34 @@ def train_and_score_poly_kernel_svr(df, prepare_function, file_prefix, selector=
                     if(selector is not None):
                         estimator = SVR(kernel='poly', degree=degree, C=C, epsilon=epsilon)
                         X_train, X_test, y_train, y_test, selected_features, current_feature_names = prepare_function(df, estimator)
-                        if feature_names is None:
-                            feature_names = list(current_feature_names)
-                            feature_name_to_index = {name: i for i, name in enumerate(feature_names)}
-                            for existing_key in poly_scores.keys():
-                                selected_features_dict[existing_key] = [0] * len(feature_names)
+                        feature_names_local = list(current_feature_names)
                     elif(extractor is not None):
                         X_train, X_test, y_train, y_test = prepare_function(df, 'poly', k)
 
                     print(f"Training polynomial kernel SVR with degree={degree}, C={C} and epsilon={epsilon} for player {df['player'].iloc[0]}")
-                    poly_key = "{},{},{}".format(degree, C, epsilon)
                     acc = train_poly_kernel_svr(X_train, X_test, y_train, y_test, degree, C, epsilon)
-                    bisect.insort(poly_scores[poly_key], acc)
-                    if acc > max_poly[poly_key]:
-                        max_poly[poly_key] = acc
-                    if selected_features is not None:
-                        for feature in selected_features:
-                            selected_features_dict[poly_key][feature_name_to_index[feature]] += 1
+                    poly_local[poly_key].append(acc)
+                    selected_features_local[poly_key] = selected_features
+
+        return poly_local, selected_features_local, feature_names_local
+
+    results = Parallel(n_jobs=-1)(delayed(process_player)(df) for df in dfs)
+
+    for poly_local, selected_features_local, feature_names_local in results:
+        if feature_names is None and feature_names_local is not None:
+            feature_names = feature_names_local
+            feature_name_to_index = {name: i for i, name in enumerate(feature_names)}
+            for existing_key in poly_scores.keys():
+                selected_features_dict[existing_key] = [0] * len(feature_names)
+        for key in poly_local.keys():
+            for acc in poly_local[key]:
+                bisect.insort(poly_scores[key], acc)
+                if acc > max_poly[key]:
+                    max_poly[key] = acc
+            selected_features = selected_features_local[key]
+            if selected_features is not None:
+                for feature in selected_features:
+                    selected_features_dict[key][feature_name_to_index[feature]] += 1
 
     with open(file_prefix+'svr_poly_scores.csv', 'w') as f:
         f.write('degree,C,epsilon,avg_score,median_score,max_score,selected_features,feature_names\n')
@@ -266,7 +346,19 @@ def train_and_score_rbf_kernel_svr(df, prepare_function, file_prefix, selector=N
                 rbf_key = "{},{},{}".format(gamma, C, epsilon)
                 rbf_scores[rbf_key] = []
                 max_rbf[rbf_key] = 0
-    for df in dfs:
+
+    def process_player(df):
+        rbf_local = {}
+        selected_features_local = {}
+        feature_names_local = None
+
+        for C in C_Vals:
+            for epsilon in epsilon_Vals:
+                for gamma in gamma_Vals:
+                    rbf_key = "{},{},{}".format(gamma, C, epsilon)
+                    rbf_local[rbf_key] = []
+                    selected_features_local[rbf_key] = None
+
         X_train, X_test, y_train, y_test = None, None, None, None
         if(selector is None and extractor is None):
             X_train, X_test, y_train, y_test = prepare_function(df)
@@ -274,26 +366,38 @@ def train_and_score_rbf_kernel_svr(df, prepare_function, file_prefix, selector=N
             for epsilon in epsilon_Vals:
                 for gamma in gamma_Vals:
                     selected_features = None
+                    rbf_key = "{},{},{}".format(gamma, C, epsilon)
                     if(selector is not None):
                         estimator = SVR(kernel='rbf', gamma=gamma, C=C, epsilon=epsilon)
                         X_train, X_test, y_train, y_test, selected_features, current_feature_names = prepare_function(df, estimator)
-                        if feature_names is None:
-                            feature_names = list(current_feature_names)
-                            feature_name_to_index = {name: i for i, name in enumerate(feature_names)}
-                            for existing_key in rbf_scores.keys():
-                                selected_features_dict[existing_key] = [0] * len(feature_names)
+                        feature_names_local = list(current_feature_names)
                     elif(extractor is not None):
                         X_train, X_test, y_train, y_test = prepare_function(df, 'rbf', k)
                     
                     print(f"Training RBF kernel SVR with gamma={gamma}, C={C} and epsilon={epsilon} for player {df['player'].iloc[0]}")
-                    rbf_key = "{},{},{}".format(gamma, C, epsilon)
                     acc = train_rbf_kernel_svr(X_train, X_test, y_train, y_test, gamma, C, epsilon)
-                    bisect.insort(rbf_scores[rbf_key], acc)
-                    if acc > max_rbf[rbf_key]:
-                        max_rbf[rbf_key] = acc
-                    if selected_features is not None:
-                        for feature in selected_features:
-                            selected_features_dict[rbf_key][feature_name_to_index[feature]] += 1
+                    rbf_local[rbf_key].append(acc)
+                    selected_features_local[rbf_key] = selected_features
+
+        return rbf_local, selected_features_local, feature_names_local
+
+    results = Parallel(n_jobs=-1)(delayed(process_player)(df) for df in dfs)
+
+    for rbf_local, selected_features_local, feature_names_local in results:
+        if feature_names is None and feature_names_local is not None:
+            feature_names = feature_names_local
+            feature_name_to_index = {name: i for i, name in enumerate(feature_names)}
+            for existing_key in rbf_scores.keys():
+                selected_features_dict[existing_key] = [0] * len(feature_names)
+        for key in rbf_local.keys():
+            for acc in rbf_local[key]:
+                bisect.insort(rbf_scores[key], acc)
+                if acc > max_rbf[key]:
+                    max_rbf[key] = acc
+            selected_features = selected_features_local[key]
+            if selected_features is not None:
+                for feature in selected_features:
+                    selected_features_dict[key][feature_name_to_index[feature]] += 1
 
     with open(file_prefix+'svr_rbf_scores.csv', 'w') as f:
         f.write('gamma,C,epsilon,avg_score,median_score,max_score,selected_features,feature_names\n')
@@ -326,33 +430,56 @@ def train_and_score_sigmoid_kernel_svr(df, prepare_function, file_prefix, select
             key = "{},{}".format(C, epsilon)
             sigmoid_scores[key] = []
             max_sigmoid[key] = 0
-    for df in dfs:
+
+    def process_player(df):
+        sigmoid_local = {}
+        selected_features_local = {}
+        feature_names_local = None
+
+        for C in C_Vals:
+            for epsilon in epsilon_Vals:
+                key = "{},{}".format(C, epsilon)
+                sigmoid_local[key] = []
+                selected_features_local[key] = None
+
         X_train, X_test, y_train, y_test = None, None, None, None
         if(selector is None and extractor is None):
             X_train, X_test, y_train, y_test = prepare_function(df)
         for C in C_Vals:
             for epsilon in epsilon_Vals:
                 selected_features = None
+                key = "{},{}".format(C, epsilon)
                 if(selector is not None):
                     estimator=SVR(kernel='sigmoid', C=C, epsilon=epsilon)
                     X_train, X_test, y_train, y_test, selected_features, current_feature_names = prepare_function(df, estimator)
-                    if feature_names is None:
-                        feature_names = list(current_feature_names)
-                        feature_name_to_index = {name: i for i, name in enumerate(feature_names)}
-                        for existing_key in sigmoid_scores.keys():
-                            selected_features_dict[existing_key] = [0] * len(feature_names)
+                    feature_names_local = list(current_feature_names)
                 elif(extractor is not None):
                     X_train, X_test, y_train, y_test = prepare_function(df, 'sigmoid', k)
                 
                 print(f"Training sigmoid kernel SVR with C={C} and epsilon={epsilon} for player {df['player'].iloc[0]}")
-                key = "{},{}".format(C, epsilon)
                 acc = train_sigmoid_kernel_svr(X_train, X_test, y_train, y_test, C, epsilon)
+                sigmoid_local[key].append(acc)
+                selected_features_local[key] = selected_features
+
+        return sigmoid_local, selected_features_local, feature_names_local
+
+    results = Parallel(n_jobs=-1)(delayed(process_player)(df) for df in dfs)
+
+    for sigmoid_local, selected_features_local, feature_names_local in results:
+        if feature_names is None and feature_names_local is not None:
+            feature_names = feature_names_local
+            feature_name_to_index = {name: i for i, name in enumerate(feature_names)}
+            for existing_key in sigmoid_scores.keys():
+                selected_features_dict[existing_key] = [0] * len(feature_names)
+        for key in sigmoid_local.keys():
+            for acc in sigmoid_local[key]:
                 bisect.insort(sigmoid_scores[key], acc)
                 if acc > max_sigmoid[key]:
                     max_sigmoid[key] = acc
-                if selected_features is not None:
-                    for feature in selected_features:
-                        selected_features_dict[key][feature_name_to_index[feature]] += 1
+            selected_features = selected_features_local[key]
+            if selected_features is not None:
+                for feature in selected_features:
+                    selected_features_dict[key][feature_name_to_index[feature]] += 1
 
     with open(file_prefix+'svr_sigmoid_scores.csv', 'w') as f:
         f.write('C,epsilon,avg_score,median_score,max_score,selected_features,feature_names\n')
