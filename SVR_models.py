@@ -195,11 +195,11 @@ def train_and_score_linear_kernel_svr(df, prepare_function, file_prefix, selecto
             for epsilon in epsilon_Vals:
                 selected_features = None
                 if(selector is not None):
-                    estimator = SVR(kernel='linear', C=C, epsilon=epsilon)
+                    estimator = SVR(kernel='linear', C=C, epsilon=epsilon, random_state=67)
                     X_train, X_test, y_train, y_test, selected_features, current_feature_names = prepare_function(df, estimator)
                     feature_names_local = list(current_feature_names)
                 elif(extractor is not None):
-                    X_train, X_test, y_train, y_test = prepare_function(df, 'linear', k)
+                    X_train, X_test, y_train, y_test = prepare_function(df, k,'linear')
 
                 print(f"Training linear kernel SVR with C={C} and epsilon={epsilon} for player {df['player'].iloc[0]}")
                 acc = train_linear_kernel_svr(X_train, X_test, y_train, y_test, C, epsilon)
@@ -282,11 +282,11 @@ def train_and_score_poly_kernel_svr(df, prepare_function, file_prefix, selector=
                     selected_features = None
                     poly_key = "{},{},{}".format(degree, C, epsilon)
                     if(selector is not None):
-                        estimator = SVR(kernel='poly', degree=degree, C=C, epsilon=epsilon)
+                        estimator = SVR(kernel='linear', degree=degree, C=C, epsilon=epsilon, random_state=67)
                         X_train, X_test, y_train, y_test, selected_features, current_feature_names = prepare_function(df, estimator)
                         feature_names_local = list(current_feature_names)
                     elif(extractor is not None):
-                        X_train, X_test, y_train, y_test = prepare_function(df, 'poly', k)
+                        X_train, X_test, y_train, y_test = prepare_function(df, k, 'poly')
 
                     print(f"Training polynomial kernel SVR with degree={degree}, C={C} and epsilon={epsilon} for player {df['player'].iloc[0]}")
                     acc = train_poly_kernel_svr(X_train, X_test, y_train, y_test, degree, C, epsilon)
@@ -368,11 +368,11 @@ def train_and_score_rbf_kernel_svr(df, prepare_function, file_prefix, selector=N
                     selected_features = None
                     rbf_key = "{},{},{}".format(gamma, C, epsilon)
                     if(selector is not None):
-                        estimator = SVR(kernel='rbf', gamma=gamma, C=C, epsilon=epsilon)
+                        estimator = SVR(kernel='linear', gamma=gamma, C=C, epsilon=epsilon, random_state=67)
                         X_train, X_test, y_train, y_test, selected_features, current_feature_names = prepare_function(df, estimator)
                         feature_names_local = list(current_feature_names)
                     elif(extractor is not None):
-                        X_train, X_test, y_train, y_test = prepare_function(df, 'rbf', k)
+                        X_train, X_test, y_train, y_test = prepare_function(df, k, 'rbf')
                     
                     print(f"Training RBF kernel SVR with gamma={gamma}, C={C} and epsilon={epsilon} for player {df['player'].iloc[0]}")
                     acc = train_rbf_kernel_svr(X_train, X_test, y_train, y_test, gamma, C, epsilon)
@@ -450,11 +450,11 @@ def train_and_score_sigmoid_kernel_svr(df, prepare_function, file_prefix, select
                 selected_features = None
                 key = "{},{}".format(C, epsilon)
                 if(selector is not None):
-                    estimator=SVR(kernel='sigmoid', C=C, epsilon=epsilon)
+                    estimator=SVR(kernel='linear', C=C, epsilon=epsilon, random_state=67)
                     X_train, X_test, y_train, y_test, selected_features, current_feature_names = prepare_function(df, estimator)
                     feature_names_local = list(current_feature_names)
                 elif(extractor is not None):
-                    X_train, X_test, y_train, y_test = prepare_function(df, 'sigmoid', k)
+                    X_train, X_test, y_train, y_test = prepare_function(df, k, 'sigmoid')
                 
                 print(f"Training sigmoid kernel SVR with C={C} and epsilon={epsilon} for player {df['player'].iloc[0]}")
                 acc = train_sigmoid_kernel_svr(X_train, X_test, y_train, y_test, C, epsilon)
