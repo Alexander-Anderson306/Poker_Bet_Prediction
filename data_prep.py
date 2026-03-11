@@ -5,8 +5,14 @@ from sklearn.feature_selection import RFECV
 from sklearn.decomposition import KernelPCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-#function to map the action to semantic values for the regression model
+
+
 def action_semantic_features(s: str):
+    """
+    Encodes the different acts of a poker game semantically.
+    We count the number of times each action occures and return that as a numpy array.
+    We return None if we get an impossible combination I.E all in twice? Or Small blind twice?
+    """
     _ALLOWED = set("BkbcrA")
     if any(ch not in _ALLOWED for ch in s):
         return np.zeros(9, dtype=np.float64)
@@ -33,6 +39,12 @@ def action_semantic_features(s: str):
 
 #function to map the hole cards to semantic values for the regression model
 def hole_cards_to_features(cards):
+    """
+    Mapps the starting cards of a poker game semantically.
+    We take a list of two strings which look like CardNumSuit
+    I.E 2h for a two of hearts or As for an ace of spades
+    We sepearte the number from the suit and encode each as seperate features.
+    """
     rank_map = {
         '2':2,'3':3,'4':4,'5':5,'6':6,
         '7':7,'8':8,'9':9,'T':10,
@@ -54,6 +66,13 @@ def hole_cards_to_features(cards):
 
 #function to load the data into a pandas dataframe and preprocess it
 def load_data(file_path):
+    """
+    This function loads the csv data into a pandas dataframe.
+    We load the data and drop unused columns. We then drop
+    all players who played less than 1500 games.
+    We also convert features like the starting cards and the game acts into 
+    new features.
+    """
     df = pd.read_csv(file_path)
     df.drop(['timestamp', 'month', 'pre_category', 'win_amt'], axis=1, inplace=True)
     #drop the rows where the player has played less than 1500 games to ensure we have at least some data for each player
@@ -83,6 +102,9 @@ def load_data(file_path):
 
 #function to separate players into separate dataframes based on player id
 def separate_players(df):
+    """
+    Separates the loaded data frame into a list of dataframes for each player.
+    """
     player_dfs = []
     for player_id, group in df.groupby('player'):
         player_dfs.append(group)
@@ -90,6 +112,9 @@ def separate_players(df):
     
 ############################################################ Bet Predictor Preprocessing ############################################################
 def prepare_bet_predictor_data(df):
+    """
+    Prepares the player by normalizing their feature data, then seperates data into training and testing sets.
+    """
     X = df.drop(columns=['player', 'bet_total'])
     y = df['bet_total'].to_numpy()
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67)
@@ -99,6 +124,10 @@ def prepare_bet_predictor_data(df):
     return X_train, X_test, y_train, y_test
 
 def prepare_bet_predictor_RFECV(df, estimator):
+    """
+    Like the above prepare function. However we also apply RFECV feature seleciton to select which features we use.
+    We return a training set, testing set, and what features we used.
+    """
     X = df.drop(columns=['player', 'bet_total'])
     feature_names = X.columns
     y = df['bet_total'].to_numpy()
@@ -115,6 +144,9 @@ def prepare_bet_predictor_RFECV(df, estimator):
     return X_train, X_test, y_train, y_test, selected_features, feature_names
 
 def prepare_bet_predictor_KPCA(df, k, kernel):
+    """
+    Like the first prepare funciton. However we also apply KernelPCA feature extraction to extract new features and reduce dimensionality.
+    """
     X = df.drop(columns=['player', 'bet_total'])
     y = df['bet_total'].to_numpy()
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67)
@@ -131,6 +163,9 @@ def prepare_bet_predictor_KPCA(df, k, kernel):
 ############################################################ Card Predictor Preprecessing ############################################################
 
 def prepare_card_predictor_data(df):
+    """
+    Prepares the player by normalizing their feature data, then seperates data into training and testing sets.
+    """
     X = df.drop(columns=['player', 'rank1','suit1','rank2','suit2', 'flop_strength', 'turn_strength', 'river_strength'])
     y = df['river_strength'].to_numpy()
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67)
@@ -140,6 +175,10 @@ def prepare_card_predictor_data(df):
     return X_train, X_test, y_train, y_test
 
 def prepare_card_predictor_RFECV(df, estimator):
+    """
+    Like the above prepare function. However we also apply RFECV feature seleciton to select which features we use.
+    We return a training set, testing set, and what features we used.
+    """
     X = df.drop(columns=['player', 'rank1','suit1','rank2','suit2', 'flop_strength', 'turn_strength', 'river_strength'])
     feature_names = X.columns
     y = df['river_strength'].to_numpy()
@@ -156,6 +195,9 @@ def prepare_card_predictor_RFECV(df, estimator):
     return X_train, X_test, y_train, y_test, selected_features, feature_names
 
 def prepare_card_predictor_KPCA(df, k, kernel):
+    """
+    Like the first prepare funciton. However we also apply KernelPCA feature extraction to extract new features and reduce dimensionality.
+    """
     X = df.drop(columns=['player', 'rank1','suit1','rank2','suit2', 'flop_strength', 'turn_strength', 'river_strength'])
     y = df['river_strength'].to_numpy()
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67)

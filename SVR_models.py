@@ -23,6 +23,24 @@ def train_sigmoid_kernel_svr(X_train, X_test, y_train, y_test, C, epsilon):
 
 ################################################################## BELOW FUNCTIONS PERFORM HYPER PARAMETER OPTOMIZATION ##################################################################
 def train_and_score_models(df, prepare_function, file_prefix):
+    """
+    Performs hyper paramater optomization with the poker data given the proper prepare funciton.
+    It only handles the basic prepare functions no selection or extraction functions.
+    Trains support vector regression machines with the linear kernel, polynomial kernel degree 2,3,4
+    rbf kernel scale and auto
+    and the sigmoid kernel
+    Each kernel trains with C= 0.1, 1, 10 and
+    epsilon = 0.01, 0.1, 1
+
+    
+    Splits the provided data frame into smaller dataframes based on player id.
+    A model is trained on each player id. Then we evaluate each hyper parameter
+    for the average fitness (R^2 score) median fitness, and max fitness for each player.
+
+    Resultes are saved in csv
+
+    This is done in parallel using as many cores as possible for time sake.
+    """
     dfs = separate_players(df)
     C_Vals = [0.1, 1, 10]
     epsilon_Vals = [0.01, 0.1, 1]
@@ -158,6 +176,26 @@ def train_and_score_models(df, prepare_function, file_prefix):
             f.write(f"{C},{epsilon},{avg_score},{median_score},{max_score}\n")
 
 def train_and_score_linear_kernel_svr(df, prepare_function, file_prefix, selector=None, extractor=None, k=10):
+    """
+    Performs hyper paramater optomization with the poker data given the prepare function.
+    Can handle feature selection and extraction.
+
+    If feature selection is used set selector to any type that is not none.
+    If extraction is used set extractor to any type that is not none.
+
+    Trains support vector regression machines with the linear kernel
+    Each kernel trains with C= 0.1, 1, 10 and
+    epsilon = 0.01, 0.1, 1
+
+    
+    Splits the provided data frame into smaller dataframes based on player id.
+    A model is trained on each player id. Then we evaluate each hyper parameter
+    for the average fitness (R^2 score) median fitness, and max fitness for each player.
+
+    Resultes are saved in csv
+
+    This is done in parallel using as many cores as possible for time sake.
+    """
     dfs = separate_players(df)
     C_Vals = [0.1, 1, 10]
     epsilon_Vals = [0.01, 0.1, 1]
@@ -240,6 +278,26 @@ def train_and_score_linear_kernel_svr(df, prepare_function, file_prefix, selecto
             f.write(f"{C},{epsilon},{avg_score},{median_score},{max_score},{selected_features},{feature_names}\n")
 
 def train_and_score_poly_kernel_svr(df, prepare_function, file_prefix, selector=None, extractor=None, k=10):
+    """
+    Performs hyper paramater optomization with the poker data given the prepare function.
+    Can handle feature selection and extraction.
+
+    If feature selection is used set selector to any type that is not none.
+    If extraction is used set extractor to any type that is not none.
+
+    Trains support vector regression machines with the polynomial kernel (degree 2, 3, 4)
+    Each kernel trains with C= 0.1, 1, 10 and
+    epsilon = 0.01, 0.1, 1
+
+    
+    Splits the provided data frame into smaller dataframes based on player id.
+    A model is trained on each player id. Then we evaluate each hyper parameter
+    for the average fitness (R^2 score) median fitness, and max fitness for each player.
+
+    Resultes are saved in csv
+
+    This is done in parallel using as many cores as possible for time sake.
+    """
     dfs = separate_players(df)
     C_Vals = [0.1, 1, 10]
     epsilon_Vals = [0.01, 0.1, 1]
@@ -326,6 +384,26 @@ def train_and_score_poly_kernel_svr(df, prepare_function, file_prefix, selector=
             f.write(f"{degree},{C},{epsilon},{avg_score},{median_score},{max_score},{selected_features},{feature_names}\n")
 
 def train_and_score_rbf_kernel_svr(df, prepare_function, file_prefix, selector=None, extractor=None, k=10):
+    """
+    Performs hyper paramater optomization with the poker data given the prepare function.
+    Can handle feature selection and extraction.
+
+    If feature selection is used set selector to any type that is not none.
+    If extraction is used set extractor to any type that is not none.
+
+    Trains support vector regression machines with the rbf kernel (gama = scale and auto)
+    Each kernel trains with C= 0.1, 1, 10 and
+    epsilon = 0.01, 0.1, 1
+
+    
+    Splits the provided data frame into smaller dataframes based on player id.
+    A model is trained on each player id. Then we evaluate each hyper parameter
+    for the average fitness (R^2 score) median fitness, and max fitness for each player.
+
+    Resultes are saved in csv
+
+    This is done in parallel using as many cores as possible for time sake.
+    """
     dfs = separate_players(df)
     C_Vals = [0.1, 1, 10]
     epsilon_Vals = [0.01, 0.1, 1]
@@ -412,6 +490,26 @@ def train_and_score_rbf_kernel_svr(df, prepare_function, file_prefix, selector=N
             f.write(f"{gamma},{C},{epsilon},{avg_score},{median_score},{max_score},{selected_features},{feature_names}\n")
 
 def train_and_score_sigmoid_kernel_svr(df, prepare_function, file_prefix, selector=None, extractor=None, k=10):
+    """
+    Performs hyper paramater optomization with the poker data given the prepare function.
+    Can handle feature selection and extraction.
+
+    If feature selection is used set selector to any type that is not none.
+    If extraction is used set extractor to any type that is not none.
+
+    Trains support vector regression machines with the sigmoid kernel
+    Each kernel trains with C= 0.1, 1, 10 and
+    epsilon = 0.01, 0.1, 1
+
+    
+    Splits the provided data frame into smaller dataframes based on player id.
+    A model is trained on each player id. Then we evaluate each hyper parameter
+    for the average fitness (R^2 score) median fitness, and max fitness for each player.
+
+    Resultes are saved in csv
+
+    This is done in parallel using as many cores as possible for time sake.
+    """
     dfs = separate_players(df)
     C_Vals = [0.1, 1, 10]
     epsilon_Vals = [0.01, 0.1, 1]

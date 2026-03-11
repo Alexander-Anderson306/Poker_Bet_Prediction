@@ -9,6 +9,20 @@ def train_random_forest(X_train, X_test, y_train, y_test, num_trees):
     return model.score(X_test, y_test)
 
 def train_and_score_rf(df, prepare_function, file_prefix, selector=None, extractor=None, k=10):
+    """
+    Trains different random forest models based on the provided prepare function.
+    Can handle feature extraction and feature selection.
+    Test models with 100 trees, 1000 trees, and 10000 trees.
+
+    
+    Splits the provided data frame into smaller dataframes based on player id.
+    A model is trained on each player id. Then we evaluate each hyper parameter
+    for the average fitness (R^2 score) median fitness, and max fitness for each player.
+
+    Resultes are saved in csv
+
+    This is done in parallel using as many cores as possible for time sake.
+    """
     num_trees = [100, 1000, 10000]
     dfs = separate_players(df)
     scores = {}
