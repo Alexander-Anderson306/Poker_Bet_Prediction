@@ -195,7 +195,7 @@ def train_and_score_linear_kernel_svr(df, prepare_function, file_prefix, selecto
             for epsilon in epsilon_Vals:
                 selected_features = None
                 if(selector is not None):
-                    estimator = SVR(kernel='linear', C=C, epsilon=epsilon, random_state=67)
+                    estimator = SVR(kernel='linear', C=C, epsilon=epsilon)
                     X_train, X_test, y_train, y_test, selected_features, current_feature_names = prepare_function(df, estimator)
                     feature_names_local = list(current_feature_names)
                 elif(extractor is not None):
@@ -282,7 +282,7 @@ def train_and_score_poly_kernel_svr(df, prepare_function, file_prefix, selector=
                     selected_features = None
                     poly_key = "{},{},{}".format(degree, C, epsilon)
                     if(selector is not None):
-                        estimator = SVR(kernel='linear', degree=degree, C=C, epsilon=epsilon, random_state=67)
+                        estimator = SVR(kernel='linear', degree=degree, C=C, epsilon=epsilon)
                         X_train, X_test, y_train, y_test, selected_features, current_feature_names = prepare_function(df, estimator)
                         feature_names_local = list(current_feature_names)
                     elif(extractor is not None):
@@ -368,7 +368,7 @@ def train_and_score_rbf_kernel_svr(df, prepare_function, file_prefix, selector=N
                     selected_features = None
                     rbf_key = "{},{},{}".format(gamma, C, epsilon)
                     if(selector is not None):
-                        estimator = SVR(kernel='linear', gamma=gamma, C=C, epsilon=epsilon, random_state=67)
+                        estimator = SVR(kernel='linear', gamma=gamma, C=C, epsilon=epsilon)
                         X_train, X_test, y_train, y_test, selected_features, current_feature_names = prepare_function(df, estimator)
                         feature_names_local = list(current_feature_names)
                     elif(extractor is not None):
@@ -450,7 +450,7 @@ def train_and_score_sigmoid_kernel_svr(df, prepare_function, file_prefix, select
                 selected_features = None
                 key = "{},{}".format(C, epsilon)
                 if(selector is not None):
-                    estimator=SVR(kernel='linear', C=C, epsilon=epsilon, random_state=67)
+                    estimator=SVR(kernel='linear', C=C, epsilon=epsilon)
                     X_train, X_test, y_train, y_test, selected_features, current_feature_names = prepare_function(df, estimator)
                     feature_names_local = list(current_feature_names)
                 elif(extractor is not None):
