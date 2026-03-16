@@ -101,7 +101,7 @@ def kpca_chart(prefix):
 
     plt.figure(figsize=(7,5))
 
-    plt.plot(components,rf_scores,marker="o",label="Random Forest")
+    plt.plot(components,rf_scores,marker="o",label="Random Forest 100 Trees")
     plt.plot(components,svr_scores,marker="o",label="SVR Linear")
 
     plt.xlabel("KPCA Components")
@@ -123,20 +123,26 @@ def plot_random_forest_tree_scores(prefix):
 
     df = pd.read_csv(file)
 
-    # Ensure tree counts are ordered
+    # ensure order 100 -> 1000 -> 10000
     df = df.sort_values("num_trees")
 
-    trees = df["num_trees"]
+    trees = df["num_trees"].astype(str)
 
     # -----------------------------
     # Trees vs Average Score
     # -----------------------------
     plt.figure(figsize=(7,5))
 
-    plt.plot(trees, df["avg_score"], marker="o")
+    plt.bar(trees, df["avg_score"])
 
     plt.xlabel("Number of Trees")
     plt.ylabel("Average Score")
+
+    # scale axis to data
+    ymin = df["avg_score"].min()
+    ymax = df["avg_score"].max()
+    padding = (ymax - ymin) * 0.1
+    plt.ylim(ymin - padding, ymax + padding)
 
     plt.tight_layout()
     plt.savefig(f"{prefix}_trees_vs_avg_score.png")
@@ -147,14 +153,20 @@ def plot_random_forest_tree_scores(prefix):
     # -----------------------------
     plt.figure(figsize=(7,5))
 
-    plt.plot(trees, df["max_score"], marker="o")
+    plt.bar(trees, df["max_score"])
 
     plt.xlabel("Number of Trees")
     plt.ylabel("Max Score")
 
+    ymin = df["max_score"].min()
+    ymax = df["max_score"].max()
+    padding = (ymax - ymin) * 0.1
+    plt.ylim(ymin - padding, ymax + padding)
+
     plt.tight_layout()
     plt.savefig(f"{prefix}_trees_vs_max_score.png")
     plt.close()
+
 
 def load_svr_bargraph_data(prefix):
     import pandas as pd

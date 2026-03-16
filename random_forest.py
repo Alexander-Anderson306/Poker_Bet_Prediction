@@ -1,14 +1,14 @@
 from sklearn.ensemble import RandomForestRegressor
 import bisect
 import numpy as np
-from data_prep import separate_players
+from data_prep import separate_players, separate_clusters
 from joblib import Parallel, delayed
 
 def train_random_forest(X_train, X_test, y_train, y_test, num_trees):
     model = RandomForestRegressor(n_estimators=num_trees, random_state=67).fit(X_train, y_train)
     return model.score(X_test, y_test)
 
-def train_and_score_rf(df, prepare_function, file_prefix, selector=None, extractor=None, k=10):
+def train_and_score_rf(df, prepare_function, file_prefix, cluster=False, selector=None, extractor=None, k=10):
     """
     Trains different random forest models based on the provided prepare function.
     Can handle feature extraction and feature selection.
@@ -23,8 +23,12 @@ def train_and_score_rf(df, prepare_function, file_prefix, selector=None, extract
 
     This is done in parallel using as many cores as possible for time sake.
     """
-    num_trees = [100, 1000, 10000]
-    dfs = separate_players(df)
+    num_trees = [100, 200, 400, 800]
+    dfs = None
+    if not cluster:
+        dfs = separate_players(df)
+    else:
+        dfs = separate_clusters(df)
     scores = {}
     max_scores = {}
     selected_features_dict = {}
@@ -62,7 +66,6 @@ def train_and_score_rf(df, prepare_function, file_prefix, selector=None, extract
             elif extractor is not None:
                 X_train, X_test, y_train, y_test = prepare_function(df, k,'linear')
             
-            print(f"Training Random Forest with Num Trees={num_t} for player {df['player'].iloc[0]}")
 
             acc = train_random_forest(X_train, X_test, y_train, y_test, num_t)
             scores_local[num_t].append(acc)
@@ -91,12 +94,20 @@ def train_and_score_rf(df, prepare_function, file_prefix, selector=None, extract
                     selected_features_dict[key][feature_name_to_index[feature]] += 1
                 
     with open(file_prefix+'random_forest_regressor.csv', 'w') as f:
-        f.write('num_trees,avg_score,median_score,max_score,selected_features,feature_names\n')
-        for num_t in num_trees:
-            avg_score = np.mean(scores[num_t])
-            median_score = np.median(scores[num_t])
-            max_score = max_scores[num_t]
-            selected_features = selected_features_dict.get(num_t, None)
-            if selected_features is not None:
-                selected_features = [count / len(dfs) for count in selected_features]
-            f.write(f"{num_t},{avg_score},{median_score},{max_score},{selected_features},{feature_names}\n")
+        if not cluster:
+            f.write('num_trees,avg_score,median_score,max_score,selected_features,feature_names\n')
+            for num_t in num_trees:
+                avg_score = np.mean(scores[num_t])
+                median_score = np.median(scores[num_t])
+                max_score = max_scores[num_t]
+                selected_features = selected_features_dict.get(num_t, None)
+                if selected_features is not None:
+                    selected_features = [count / len(dfs) for count in selected_features]
+                f.write(f"{num_t},{avg_score},{median_score},{max_score},{selected_features},{feature_names}\n")
+        else:
+            f.write('num_trees,c1_score,c2_score,selected_features,feature_names\n')
+            for num_t in num_trees:
+                selected_features = selected_features_dict.get(num_t, None)
+                if selected_features is not None:
+                    selected_features = [count / len(dfs) for count in selected_features]
+                f.write(f"{num_t},{scores[num_t][0]},{scores[num_t][1]},{selected_features},{feature_names}\n")
