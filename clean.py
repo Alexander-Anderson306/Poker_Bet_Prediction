@@ -64,7 +64,7 @@ def process_rfecv_csv(file_path):
     print(f"Feature file: {feature_file}")
 
 
-def process_kpca_csv(file_path):
+def process_junk_headers_csv(file_path):
     df = pd.read_csv(file_path)
 
     if df.shape[1] < 2:
@@ -79,7 +79,7 @@ def process_kpca_csv(file_path):
     print(f"Removed columns: {removed_cols[0]}, {removed_cols[1]}")
 
 
-def process_all_files(directory="CSVs"):
+def process_all_files(directory="CSVs/PLAYER_CSVs/"):
     for file in os.listdir(directory):
         if not file.endswith(".csv"):
             continue
@@ -88,8 +88,8 @@ def process_all_files(directory="CSVs"):
 
         if "RFECV" in file:
             process_rfecv_csv(full_path)
-        elif "KPCA" in file:
-            process_kpca_csv(full_path)
+        elif "KPCA" in file or "forest" in file or "MLP" in file:
+            process_junk_headers_csv(full_path)
 
 
 if __name__ == "__main__":

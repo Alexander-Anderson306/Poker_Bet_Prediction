@@ -15,24 +15,14 @@ def action_semantic_features(s: str):
     """
     _ALLOWED = set("BkbcrA")
     if any(ch not in _ALLOWED for ch in s):
-        return np.zeros(9, dtype=np.float64)
-
-    #blind B can only appear at the start, and all in A can only appear at the end, and there can only be one of each
-    if s.count("B") > 1 or ("B" in s and not s.startswith("B")):
-        return None
-    if s.count("A") > 1 or ("A" in s and not s.endswith("A")):
-        return None
+        return np.zeros(5, dtype=np.float64)
 
     feats = np.array([
         len(s),
-        1 if "B" in s else 0,
-        1 if "A" in s else 0,
         s.count("k"),
         s.count("b"),
         s.count("c"),
         s.count("r"),
-        1 if s.startswith("B") else 0,
-        1 if s.endswith("A") else 0,
     ], dtype=np.float64)
 
     return feats

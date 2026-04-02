@@ -6,6 +6,8 @@ from MLP_models import *
 
 df = load_data('CSVs/combined.csv') 
 
+print(df.columns)
+
 #train without feature selection
 print("Training Player Models for bet prediction all SVR Kernels...")
 train_and_score_models(df, prepare_function=prepare_bet_predictor_data, file_prefix='CSVs/PLAYER_CSVs/bet_predictor_')
