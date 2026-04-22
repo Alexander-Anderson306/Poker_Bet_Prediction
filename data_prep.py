@@ -88,6 +88,44 @@ def load_data(file_path):
 
     df = pd.concat(
         [df.drop(columns=["hole_cards","flop_act","turn_act","river_act"]), flop, turn, river], axis=1)
+    
+    #convert the csv has the persona column convert high_bluff into 1 and low_bluff into 0
+    df['persona'] = df['persona'].map({'high_bluff': 1, 'low_bluff': 0})
+    return df
+
+def load_class_data(file_path):
+    """
+    """
+    df = pd.read_csv(file_path)
+
+    df.drop(['timestamp', 'month', 'pre_category'], axis=1, inplace=True)
+
+    #convert hole cards from string to Python list/tuple
+    df['hole_cards'] = df['hole_cards'].apply(ast.literal_eval)
+
+    #transform categorical features into semantic numeric features
+    df[['rank1', 'suit1', 'rank2', 'suit2']] = pd.DataFrame(
+        df['hole_cards'].apply(hole_cards_to_features).tolist(),
+        index=df.index
+    )
+
+    df['flop_act'] = df['flop_act'].map(action_semantic_features)
+    df['turn_act'] = df['turn_act'].map(action_semantic_features)
+    df['river_act'] = df['river_act'].map(action_semantic_features)
+
+    #drop invalid rows
+    df.dropna(subset=['hole_cards', 'flop_act', 'turn_act', 'river_act'], inplace=True)
+
+    #expand action feature lists into columns
+    flop = pd.DataFrame(df['flop_act'].tolist(), index=df.index).add_prefix('flop_')
+    turn = pd.DataFrame(df['turn_act'].tolist(), index=df.index).add_prefix('turn_')
+    river = pd.DataFrame(df['river_act'].tolist(), index=df.index).add_prefix('river_')
+
+    df = pd.concat(
+        [df.drop(columns=['hole_cards', 'flop_act', 'turn_act', 'river_act']), flop, turn, river],
+        axis=1
+    )
+
     return df
 
 #function to separate players into separate dataframes based on player id
@@ -324,9 +362,107 @@ def prepare_card_predictor_KPCA_clustered(df, k, kernel):
     """
     Like the first prepare funciton. However we also apply KernelPCA feature extraction to extract new features and reduce dimensionality.
     """
-    X = df.drop(columns=['player', 'rank1','suit1','rank2','suit2', 'flop_strength', 'turn_strength', 'river_strength', 'player'])
+    X = df.drop(columns=['persona', 'rank1','suit1','rank2','suit2', 'flop_strength', 'turn_strength', 'river_strength', 'player'])
     y = df['river_strength'].to_numpy()
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67)
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+
+    kpca = KernelPCA(n_components=k, kernel=kernel)
+    X_train = kpca.fit_transform(X_train)
+    X_test = kpca.transform(X_test)
+
+    return X_train, X_test, y_train, y_test
+
+############################################################ Class Prediction Preprocessing ALL INFO ############################################################
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.feature_selection import RFECV
+from sklearn.decomposition import KernelPCA
+
+def prepare_persona_predictor_all(df):
+    X = df.drop(columns=['persona','player'])
+    y = df['persona'].to_numpy()
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67, stratify=y)
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+
+    return X_train, X_test, y_train, y_test
+
+def prepare_persona_predictor_RFECV_all(df, estimator):
+    X = df.drop(columns=['persona', 'player'])
+    feature_names = X.columns
+    y = df['persona'].to_numpy()
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67, stratify=y)
+
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+    selector = RFECV(estimator=estimator, step=1, cv=5, scoring='accuracy')
+    X_train = selector.fit_transform(X_train, y_train)
+    X_test = selector.transform(X_test)
+
+    selected_features = feature_names[selector.get_support()]
+
+    return X_train, X_test, y_train, y_test, selected_features, feature_names
+
+
+def prepare_persona_predictor_KPCA_all(df, k, kernel):
+    X = df.drop(columns=['persona', 'player'])
+    y = df['persona'].to_numpy()
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67, stratify=y)
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+
+    kpca = KernelPCA(n_components=k,kernel=kernel)
+    X_train = kpca.fit_transform(X_train)
+    X_test = kpca.transform(X_test)
+
+    return X_train, X_test, y_train, y_test
+
+############################################################ Class Prediction Preprocessing CARD INFO ############################################################
+def prepare_persona_predictor_card_info(df):
+    X = df.drop(columns=['persona', 'rank1', 'suit1', 'rank2', 'suit2', 'flop_strength', 'turn_strength', 'river_strength','player', 'flop_bluff_idx','turn_bluff_idx','river_bluff_idx'])
+    y = df['persona'].to_numpy()
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67, stratify=y)
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+
+    return X_train, X_test, y_train, y_test
+
+
+def prepare_persona_predictor_RFECV_card_info(df, estimator):
+    X = df.drop(columns=['persona', 'rank1', 'suit1', 'rank2', 'suit2', 'flop_strength', 'turn_strength', 'river_strength','player', 'flop_bluff_idx','turn_bluff_idx','river_bluff_idx'])
+    feature_names = X.columns
+    y = df['persona'].to_numpy()
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67, stratify=y)
+
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+
+    selector = RFECV(estimator=estimator,step=1,cv=5,scoring='accuracy')
+
+    X_train = selector.fit_transform(X_train, y_train)
+    X_test = selector.transform(X_test)
+
+    selected_features = feature_names[selector.get_support()]
+
+    return X_train, X_test, y_train, y_test, selected_features, feature_names
+
+
+def prepare_persona_predictor_KPCA_card_info(df, k, kernel):
+    X = df.drop(columns=['persona', 'rank1', 'suit1', 'rank2', 'suit2', 'flop_strength', 'turn_strength', 'river_strength','player', 'flop_bluff_idx','turn_bluff_idx','river_bluff_idx'])
+    y = df['persona'].to_numpy()
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=67, stratify=y)
+
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)

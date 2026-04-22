@@ -1,5 +1,5 @@
 from data_prep import load_data
-from SVR_models import *
+from SV_models import *
 from data_prep import *
 from random_forest import *
 from MLP_models import *
