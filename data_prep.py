@@ -472,3 +472,22 @@ def prepare_persona_predictor_KPCA_card_info(df, k, kernel):
     X_test = kpca.transform(X_test)
 
     return X_train, X_test, y_train, y_test
+
+#function that trims the massive dataframe down to a smaller size
+def balance_and_limit_samples(df, target_col='persona', max_samples_per_class=50000):
+    random_state = 67
+
+    class_counts = df[target_col].value_counts()
+    samples_per_class = min(class_counts.min(), max_samples_per_class)
+
+    balanced_df = (
+        df.groupby(target_col, group_keys=False)
+          .sample(n=samples_per_class, random_state=random_state)
+          .sample(frac=1, random_state=random_state)
+          .reset_index(drop=True)
+    )
+
+    print("Balanced class counts:")
+    print(balanced_df[target_col].value_counts())
+
+    return balanced_df

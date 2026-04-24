@@ -1,12 +1,11 @@
 from joblib import Parallel, delayed
-
-from data_prep import load_class_data
 from SV_models import *
 from data_prep import *
 from random_forest import *
 from MLP_models import *
 
-df = load_class_data('CSVs/poker_data_master_clustered.csv')
+df = load_class_data('CSVs/poker_data_clustered_FULL.csv')
+df = balance_and_limit_samples(df)
 
 print(df.columns)
 
@@ -293,7 +292,7 @@ jobs = [
     ),
 ]
 
-Parallel(n_jobs=-1, prefer="processes")(
+Parallel(n_jobs=4, backend="threading")(
     delayed(run_job)(message, func, **kwargs)
     for message, func, kwargs in jobs
 )
