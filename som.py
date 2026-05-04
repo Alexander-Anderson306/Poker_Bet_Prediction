@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from sklearn_som.som import SOM
 from data_prep import load_class_data
 from data_prep import prepare_persona_predictor_card_info
+from data_prep import prepare_persona_predictor_all
 from data_prep import balance_and_limit_samples
 from joblib import Parallel, delayed
 import itertools
@@ -89,15 +90,15 @@ def save_som_hit_map(som, X, size, save_plot_name):
 #Raw feature SOM
 def optimize_raw_som(X_train):
     #hyper parameters
-    map_sizes = [6, 8, 10, 12, 15]
-    epoch_values = [5, 10, 20, 40]
-    lr_values = [0.05, 0.1, 0.2, 0.4, 0.6]
+    map_sizes = [80]
+    epoch_values = [10]
+    lr_values = [0.2]
 
     configs = list(itertools.product(map_sizes, epoch_values, lr_values))
 
     print(f"Running {len(configs)} SOM configurations in parallel...")
 
-    results = Parallel(n_jobs=4, backend="threading", verbose=10)(
+    results = Parallel(n_jobs=-1, backend="threading", verbose=10)(
         delayed(train_and_score_som_config)(X_train, size, epochs, lr)
         for size, epochs, lr in configs
     )
@@ -129,7 +130,7 @@ df = load_class_data('CSVs/poker_data_clustered_FULL.csv')
 df = balance_and_limit_samples(df)
 
 # prepare features + split + scaling
-X_train, X_test, y_train, y_test = prepare_persona_predictor_card_info(df)
+X_train, X_test, y_train, y_test = prepare_persona_predictor_all(df)
 
 print(f"Training samples: {X_train.shape}")
 print(f"Testing samples:  {X_test.shape}")
@@ -142,3 +143,14 @@ print(f"Best SOM size: {size}x{size}")
 print(f"Epochs: {epochs}")
 print(f"Learning rate: {lr}")
 print(f"Quantization error: {best_qe:.5f}")
+
+#increase resolution and make dots not squares
+#have some representative players that we label
+#human in da loop
+#lets look at famous poker players map them on the map
+#label the highlighted regions. What kind of players are they?
+#really increase the number of squares
+#can be applied as a classifier predictor
+#go from unsupervised SOM transform it with lables into a classifier
+#we can see topological map (distances between nodes is significant) if they are close they are similar.
+#good way to visualize N dimensional data in 2D (interperatable AI)
