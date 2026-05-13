@@ -697,27 +697,18 @@ def train_and_score_SVC_models(df, prepare_function, file_prefix):
     rbf_scores = {}
     sigmoid_scores = {}
 
-    max_linear = {}
-    max_poly = {}
-    max_rbf = {}
-    max_sigmoid = {}
-
     for C in C_Vals:
         key = "{}".format(C)
-        linear_scores[key] = []
-        max_linear[key] = 0
-        sigmoid_scores[key] = []
-        max_sigmoid[key] = 0
+        linear_scores[key] = 0
+        sigmoid_scores[key] = 0
 
         for degree in degree_Vals:
             poly_key = "{},{}".format(degree, C)
-            poly_scores[poly_key] = []
-            max_poly[poly_key] = 0
+            poly_scores[poly_key] = 0
 
         for gamma in gamma_Vals:
             rbf_key = "{},{}".format(gamma, C)
-            rbf_scores[rbf_key] = []
-            max_rbf[rbf_key] = 0
+            rbf_scores[rbf_key] = 0
 
     X_train, X_test, y_train, y_test = prepare_function(df)
 
@@ -725,69 +716,52 @@ def train_and_score_SVC_models(df, prepare_function, file_prefix):
         key = "{}".format(C)
 
         acc = train_linear_kernel_svc(X_train, X_test, y_train, y_test, C)
-        linear_scores[key].append(acc)
-        if acc > max_linear[key]:
-            max_linear[key] = acc
+        linear_scores[key] = acc
 
         for degree in degree_Vals:
             poly_key = "{},{}".format(degree, C)
             acc = train_poly_kernel_svc(X_train, X_test, y_train, y_test, degree, C)
-            poly_scores[poly_key].append(acc)
-            if acc > max_poly[poly_key]:
-                max_poly[poly_key] = acc
+            poly_scores[poly_key] = acc
 
         for gamma in gamma_Vals:
             rbf_key = "{},{}".format(gamma, C)
             acc = train_rbf_kernel_svc(X_train, X_test, y_train, y_test, gamma, C)
-            rbf_scores[rbf_key].append(acc)
-            if acc > max_rbf[rbf_key]:
-                max_rbf[rbf_key] = acc
+            rbf_scores[rbf_key] = acc
 
         acc = train_sigmoid_kernel_svc(X_train, X_test, y_train, y_test, C)
-        sigmoid_scores[key].append(acc)
-        if acc > max_sigmoid[key]:
-            max_sigmoid[key] = acc
+        sigmoid_scores[key] = acc
 
     with open(file_prefix + 'svc_linear_scores.csv', 'w') as f:
-        f.write('C,avg_score,median_score,max_score\n')
+        f.write('C,score\n')
         for key in linear_scores.keys():
             C = key
-            avg_score = np.mean(linear_scores[key])
-            median_score = np.median(linear_scores[key])
-            max_score = max_linear[key]
-            f.write(f"{C},{avg_score},{median_score},{max_score}\n")
+            score = linear_scores[key]
+            f.write(f"{C},{score}\n")
 
     with open(file_prefix + 'svc_poly_scores.csv', 'w') as f:
-        f.write('degree,C,avg_score,median_score,max_score\n')
+        f.write('degree,C,score\n')
         for key in poly_scores.keys():
             degree, C = key.split(',')
-            avg_score = np.mean(poly_scores[key])
-            median_score = np.median(poly_scores[key])
-            max_score = max_poly[key]
-            f.write(f"{degree},{C},{avg_score},{median_score},{max_score}\n")
+            score = poly_scores[key]
+            f.write(f"{degree},{C},{score}\n")
 
     with open(file_prefix + 'svc_rbf_scores.csv', 'w') as f:
-        f.write('gamma,C,avg_score,median_score,max_score\n')
+        f.write('gamma,C,score\n')
         for key in rbf_scores.keys():
             gamma, C = key.split(',')
-            avg_score = np.mean(rbf_scores[key])
-            median_score = np.median(rbf_scores[key])
-            max_score = max_rbf[key]
-            f.write(f"{gamma},{C},{avg_score},{median_score},{max_score}\n")
+            score = rbf_scores[key]
+            f.write(f"{gamma},{C},{score}\n")
 
     with open(file_prefix + 'svc_sigmoid_scores.csv', 'w') as f:
-        f.write('C,avg_score,median_score,max_score\n')
+        f.write('C,score\n')
         for key in sigmoid_scores.keys():
             C = key
-            avg_score = np.mean(sigmoid_scores[key])
-            median_score = np.median(sigmoid_scores[key])
-            max_score = max_sigmoid[key]
-            f.write(f"{C},{avg_score},{median_score},{max_score}\n")
+            score = sigmoid_scores[key]
+            f.write(f"{C},{score}\n")
 
 def train_and_score_linear_kernel_svc(df, prepare_function, file_prefix, selector=None, extractor=None, k=10):
     C_Vals = [0.1, 1, 10]
     linear_scores = {}
-    max_linear = {}
     selected_features_dict = {}
     feature_names = None
     feature_name_to_index = None
@@ -797,8 +771,7 @@ def train_and_score_linear_kernel_svc(df, prepare_function, file_prefix, selecto
 
     for C in C_Vals:
         key = "{}".format(C)
-        linear_scores[key] = []
-        max_linear[key] = 0
+        linear_scores[key] = 0
         selected_features_dict[key] = None
 
     X_train, X_test, y_train, y_test = None, None, None, None
@@ -825,23 +798,18 @@ def train_and_score_linear_kernel_svc(df, prepare_function, file_prefix, selecto
 
         acc = train_linear_kernel_svc(X_train, X_test, y_train, y_test, C)
 
-        linear_scores[key].append(acc)
-
-        if acc > max_linear[key]:
-            max_linear[key] = acc
+        linear_scores[key] = acc
 
         if selected_features is not None:
             for feature in selected_features:
                 selected_features_dict[key][feature_name_to_index[feature]] += 1
 
     with open(file_prefix + 'svc_linear_scores.csv', 'w') as f:
-        f.write('C,avg_score,median_score,max_score,selected_features,feature_names\n')
+        f.write('C,score,selected_features,feature_names\n')
 
         for key in linear_scores.keys():
             C = key
-            avg_score = np.mean(linear_scores[key])
-            median_score = np.median(linear_scores[key])
-            max_score = max_linear[key]
+            score = linear_scores[key]
             selected_features = selected_features_dict.get(key, None)
 
-            f.write(f"{C},{avg_score},{median_score},{max_score},{selected_features},{feature_names}\n")
+            f.write(f"{C},{score},{selected_features},{feature_names}\n")

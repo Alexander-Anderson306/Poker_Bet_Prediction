@@ -119,7 +119,6 @@ def train_and_score_MLP_classifier(df, prepare_function, file_prefix, selector=N
     solvers = ['adam', 'lbfgs']
 
     MLP_scores = {}
-    max_MLP = {}
     selected_features_dict = {}
     feature_names = None
     feature_name_to_index = None
@@ -130,27 +129,50 @@ def train_and_score_MLP_classifier(df, prepare_function, file_prefix, selector=N
     for learning_rate_type in learning_rates:
         for learning_rate_init in learning_rate_inits:
             for solver in solvers:
-                key = "{},{},{}".format(learning_rate_type, learning_rate_init, solver)
-                MLP_scores[key] = []
-                max_MLP[key] = 0
+                key = "{},{},{}".format(
+                    learning_rate_type,
+                    learning_rate_init,
+                    solver
+                )
+
+                MLP_scores[key] = 0
                 selected_features_dict[key] = None
 
     X_train, X_test, y_train, y_test = None, None, None, None
+
     if selector is None and extractor is None:
         X_train, X_test, y_train, y_test = prepare_function(df)
 
     for learning_rate_type in learning_rates:
         for learning_rate_init in learning_rate_inits:
             for solver in solvers:
+
                 selected_features = None
-                key = "{},{},{}".format(learning_rate_type, learning_rate_init, solver)
+
+                key = "{},{},{}".format(
+                    learning_rate_type,
+                    learning_rate_init,
+                    solver
+                )
 
                 if selector is not None:
-                    estimator = RandomForestClassifier(n_estimators=100, random_state=67)
-                    X_train, X_test, y_train, y_test, selected_features, current_feature_names = prepare_function(df, estimator)
+                    estimator = RandomForestClassifier(
+                        n_estimators=100,
+                        random_state=67
+                    )
+
+                    X_train, X_test, y_train, y_test, selected_features, current_feature_names = prepare_function(
+                        df,
+                        estimator
+                    )
+
                     feature_names = list(current_feature_names)
+
                     if feature_name_to_index is None:
-                        feature_name_to_index = {name: i for i, name in enumerate(feature_names)}
+                        feature_name_to_index = {
+                            name: i for i, name in enumerate(feature_names)
+                        }
+
                         for existing_key in MLP_scores.keys():
                             selected_features_dict[existing_key] = [0] * len(feature_names)
 
@@ -158,26 +180,31 @@ def train_and_score_MLP_classifier(df, prepare_function, file_prefix, selector=N
                     X_train, X_test, y_train, y_test = prepare_function(df, k, 'linear')
 
                 acc = train_MLP_classifier(
-                    X_train, X_test, y_train, y_test,
-                    learning_rate_init, learning_rate_type, solver
+                    X_train,
+                    X_test,
+                    y_train,
+                    y_test,
+                    learning_rate_init,
+                    learning_rate_type,
+                    solver
                 )
 
-                MLP_scores[key].append(acc)
-                if acc > max_MLP[key]:
-                    max_MLP[key] = acc
+                MLP_scores[key] = acc
 
                 if selected_features is not None:
                     for feature in selected_features:
                         selected_features_dict[key][feature_name_to_index[feature]] += 1
 
     with open(file_prefix + 'MLP_classifier_scores.csv', 'w') as f:
-        f.write('learning_rate,learning_rate_init,solver,avg_score,median_score,max_score,selected_features,feature_names\n')
+        f.write('learning_rate,learning_rate_init,solver,score,selected_features,feature_names\n')
+
         for key in MLP_scores.keys():
             learning_rate_type, learning_rate_init, solver = key.split(',')
-            avg_score = np.mean(MLP_scores[key])
-            median_score = np.median(MLP_scores[key])
-            max_score = max_MLP[key]
+
+            score = MLP_scores[key]
 
             selected_features = selected_features_dict.get(key, None)
 
-            f.write(f"{learning_rate_type},{learning_rate_init},{solver},{avg_score},{median_score},{max_score},{selected_features},{feature_names}\n")
+            f.write(
+                f"{learning_rate_type},{learning_rate_init},{solver},{score},{selected_features},{feature_names}\n"
+            )

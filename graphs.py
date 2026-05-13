@@ -441,29 +441,301 @@ def plot_rfecv_random_forest_scores(prefix):
     plt.tight_layout()
     plt.savefig(f"{prefix}_RFECV_random_forest_scores_bargraph.png")
     plt.close()
+# -----------------------------
+# Classification SVC Charts
+# -----------------------------
+def plot_svc_scores(prefix):
+    files = [
+        (f"{prefix}_svc_linear_scores.csv", "SVC Linear"),
+        (f"{prefix}_svc_sigmoid_scores.csv", "SVC Sigmoid"),
+        (f"{prefix}_svc_poly_scores.csv", "SVC Polynomial"),
+        (f"{prefix}_svc_rbf_scores.csv", "SVC RBF")
+    ]
 
+    for file, title_name in files:
+        df = read_csv_checked(file)
+
+        label_cols = [col for col in ["degree", "gamma", "C"] if col in df.columns]
+
+        labels = []
+        for _, row in df.iterrows():
+            parts = []
+            for col in label_cols:
+                parts.append(f"{col}={row[col]}")
+            labels.append("\n".join(parts))
+
+        x = np.arange(len(labels))
+        width = 0.4
+
+        plt.figure(figsize=(12, 6))
+
+        plt.bar(x - width/2, df["avg_score"], width, label="Score")
+
+        ymin = df["avg_score"].min()
+        ymax = df["avg_score"].max()
+        padding = (ymax - ymin) * 0.1 if ymax != ymin else 0.01
+        plt.ylim(ymin - padding, ymax + padding)
+
+        plt.xticks(x, labels, rotation=45, ha="right")
+        plt.xlabel("SVC Hyperparameters")
+        plt.ylabel("Score")
+        plt.title(f"{prefix} {title_name} Scores")
+        plt.legend()
+        plt.tight_layout()
+
+        output = file.replace(".csv", "_bargraph.png")
+        plt.savefig(output)
+        plt.close()
+
+
+# -----------------------------
+# Classification KPCA Chart
+# -----------------------------
+def kpca_classifier_chart(prefix):
+    components = [10, 15, 20]
+
+    rf_scores = []
+    svc_scores = []
+    mlp_scores = []
+
+    for c in components:
+        rf_scores.append(
+            best_score_from_file(f"{prefix}_KPCA_{c}_random_forest_classifier.csv", "avg_score")
+        )
+        svc_scores.append(
+            best_score_from_file(f"{prefix}_KPCA_{c}_svc_linear_scores.csv", "avg_score")
+        )
+        mlp_scores.append(
+            best_score_from_file(f"{prefix}_KPCA_{c}_MLP_classifier_scores.csv", "avg_score")
+        )
+
+    plt.figure(figsize=(7, 5))
+
+    plt.plot(components, rf_scores, marker="o", label="Random Forest Classifier")
+    plt.plot(components, svc_scores, marker="o", label="SVC Linear")
+    plt.plot(components, mlp_scores, marker="o", label="MLP Classifier")
+
+    plt.xlabel("KPCA Components")
+    plt.ylabel("Best Score")
+    plt.title(f"{prefix} KPCA Classifier Comparison")
+
+    plt.xticks(components)
+    plt.legend()
+    plt.tight_layout()
+
+    plt.savefig(f"{prefix}_kpca_classifier_comparison.png")
+    plt.close()
+
+
+# -----------------------------
+# Classification Random Forest Bar Graphs
+# -----------------------------
+def plot_random_forest_classifier_scores(prefix):
+    file = f"{prefix}_random_forest_classifier.csv"
+
+    df = read_csv_checked(file)
+    df = df.sort_values("num_trees")
+
+    trees = df["num_trees"].astype(str)
+
+    plt.figure(figsize=(7, 5))
+    plt.bar(trees, df["avg_score"])
+
+    plt.xlabel("Number of Trees")
+    plt.ylabel("Score")
+    plt.title(f"{prefix} Random Forest Classifier Score")
+
+    ymin = df["avg_score"].min()
+    ymax = df["avg_score"].max()
+    padding = (ymax - ymin) * 0.1 if ymax != ymin else 0.01
+    plt.ylim(ymin - padding, ymax + padding)
+
+    plt.tight_layout()
+    plt.savefig(f"{prefix}_classifier_trees_vs_score.png")
+    plt.close()
+
+
+# -----------------------------
+# Standalone MLP Classifier Bar Graphs
+# -----------------------------
+def plot_mlp_classifier_scores(prefix):
+    df = read_csv_checked(f"{prefix}_MLP_classifier_scores.csv")
+
+    labels = [
+        f"{row['solver']}\n{row['learning_rate']}\n{row['learning_rate_init']}"
+        for _, row in df.iterrows()
+    ]
+
+    x = np.arange(len(labels))
+    width = 0.4
+
+    plt.figure(figsize=(12, 6))
+
+    plt.bar(x - width/2, df["avg_score"], width, label="Score")
+
+    ymin = df["avg_score"].min()
+    ymax = df["avg_score"].max()
+    padding = (ymax - ymin) * 0.1 if ymax != ymin else 0.01
+    plt.ylim(ymin - padding, ymax + padding)
+
+    plt.xticks(x, labels, rotation=45, ha="right")
+    plt.xlabel("MLP Hyperparameters")
+    plt.ylabel("Score")
+    plt.title(f"{prefix} MLP Classifier Scores")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f"{prefix}_MLP_classifier_scores_bargraph.png")
+    plt.close()
+
+
+# -----------------------------
+# RFECV Classifier Single-Entry Graphs
+# -----------------------------
+def plot_rfecv_mlp_classifier_scores(prefix):
+    df = read_csv_checked(f"{prefix}_RFECV_MLP_classifier_scores.csv")
+
+    row = df.iloc[0]
+
+    label = "Average Score"
+    values = row["avg_score"]
+
+    plt.figure(figsize=(7, 5))
+    plt.bar(label, values)
+
+    ymin = values
+    ymax = values
+    padding = (ymax - ymin) * 0.1 if ymax != ymin else 0.01
+    plt.ylim(ymin - padding, ymax + padding)
+
+    plt.xlabel("Score Type")
+    plt.ylabel("Score")
+    plt.title(
+        f"{prefix} RFECV MLP Classifier Scores\n"
+        f"{row['solver']}, {row['learning_rate']}, {row['learning_rate_init']}"
+    )
+
+    plt.tight_layout()
+    plt.savefig(f"{prefix}_RFECV_MLP_classifier_scores_bargraph.png")
+    plt.close()
+
+
+def plot_rfecv_random_forest_classifier_scores(prefix):
+    df = read_csv_checked(f"{prefix}_RFECV_random_forest_classifier.csv")
+
+    row = df.iloc[0]
+
+    label = "Score"
+    values = row["avg_score"]
+
+    plt.figure(figsize=(7, 5))
+    plt.bar(label, values)
+
+    ymin = values
+    ymax = values
+    padding = (ymax - ymin) * 0.1 if ymax != ymin else 0.01
+    plt.ylim(ymin - padding, ymax + padding)
+
+    plt.ylabel("Score")
+    plt.title(f"{prefix} RFECV Random Forest Classifier Scores\n{row['num_trees']} Trees")
+
+    plt.tight_layout()
+    plt.savefig(f"{prefix}_RFECV_random_forest_classifier_scores_bargraph.png")
+    plt.close()
+
+
+def plot_rfecv_svc_classifier_scores(prefix):
+    df = read_csv_checked(f"{prefix}_RFECV_svc_linear_scores.csv")
+
+    row = df.iloc[0]
+
+    label = "Average Score"
+    values = row["avg_score"]
+
+    plt.figure(figsize=(7, 5))
+    plt.bar(label, values)
+
+    ymin = values
+    ymax = values
+    padding = (ymax - ymin) * 0.1 if ymax != ymin else 0.01
+    plt.ylim(ymin - padding, ymax + padding)
+
+    plt.ylabel("Score")
+    plt.title(f"{prefix} RFECV SVC Linear Scores\nC={row['C']}")
+
+    plt.tight_layout()
+    plt.savefig(f"{prefix}_RFECV_svc_linear_scores_bargraph.png")
+    plt.close()
 # -----------------------------
 # Run everything
 # -----------------------------
-svr_heatmaps("bet_predictor")
-svr_heatmaps("card_predictor")
+BASE_DIR = "CSVs"
 
-kpca_chart("bet_predictor")
-kpca_chart("card_predictor")
+REGRESSION_DIRS = [
+    os.path.join(BASE_DIR, "PLAYER_CSVs"),
+    os.path.join(BASE_DIR, "CLUSTER_CSVs")
+]
 
-plot_random_forest_tree_scores("bet_predictor")
-plot_random_forest_tree_scores("card_predictor")
+CLASS_DIR = os.path.join(BASE_DIR, "CLASS_CSVs")
 
-plot_all_svr_bargraphs()
-plot_feature_histograms()
 
-plot_mlp_scores("bet_predictor")
-plot_mlp_scores("card_predictor")
+def run_regression_graphs(directory):
+    old_cwd = os.getcwd()
+    os.chdir(directory)
 
-plot_rfecv_mlp_scores("bet_predictor")
-plot_rfecv_mlp_scores("card_predictor")
+    svr_heatmaps("bet_predictor")
+    svr_heatmaps("card_predictor")
 
-plot_rfecv_random_forest_scores("bet_predictor")
-plot_rfecv_random_forest_scores("card_predictor")
+    kpca_chart("bet_predictor")
+    kpca_chart("card_predictor")
+
+    plot_random_forest_tree_scores("bet_predictor")
+    plot_random_forest_tree_scores("card_predictor")
+
+    plot_all_svr_bargraphs()
+    plot_feature_histograms()
+
+    plot_mlp_scores("bet_predictor")
+    plot_mlp_scores("card_predictor")
+
+    plot_rfecv_mlp_scores("bet_predictor")
+    plot_rfecv_mlp_scores("card_predictor")
+
+    plot_rfecv_random_forest_scores("bet_predictor")
+    plot_rfecv_random_forest_scores("card_predictor")
+
+    os.chdir(old_cwd)
+
+
+def run_classification_graphs(directory):
+    old_cwd = os.getcwd()
+    os.chdir(directory)
+
+    class_prefixes = [
+        "persona_predictor",
+        "persona_predictor_card_info"
+    ]
+
+    for prefix in class_prefixes:
+        kpca_classifier_chart(prefix)
+        plot_random_forest_classifier_scores(prefix)
+        plot_svc_scores(prefix)
+        plot_mlp_classifier_scores(prefix)
+        plot_rfecv_mlp_classifier_scores(prefix)
+        plot_rfecv_random_forest_classifier_scores(prefix)
+        plot_rfecv_svc_classifier_scores(prefix)
+
+    plot_feature_histograms()
+
+    os.chdir(old_cwd)
+
+
+for directory in REGRESSION_DIRS:
+    print(f"Generating regression graphs in {directory}")
+    run_regression_graphs(directory)
+
+print(f"Generating classification graphs in {CLASS_DIR}")
+run_classification_graphs(CLASS_DIR)
+
+print("All graphs generated.")
 
 print("All graphs generated.")

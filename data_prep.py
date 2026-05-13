@@ -89,8 +89,9 @@ def load_data(file_path):
     df = pd.concat(
         [df.drop(columns=["hole_cards","flop_act","turn_act","river_act"]), flop, turn, river], axis=1)
     
-    #convert the csv has the persona column convert high_bluff into 1 and low_bluff into 0
-    df['persona'] = df['persona'].map({'high_bluff': 1, 'low_bluff': 0})
+    #convert the csv has the persona column convert high_bluff into 1 and low_bluff into 0 
+    #uncomment for class data
+    #df['persona'] = df['persona'].map({'high_bluff': 1, 'low_bluff': 0})
     return df
 
 def load_class_data(file_path):

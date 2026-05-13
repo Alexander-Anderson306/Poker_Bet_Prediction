@@ -120,7 +120,6 @@ def train_and_score_rf(df, prepare_function, file_prefix, cluster=False, selecto
 def train_and_score_rf_classifier(df, prepare_function, file_prefix, selector=None, extractor=None, k=10):
     num_trees = [100, 200, 400, 800]
     scores = {}
-    max_scores = {}
     selected_features_dict = {}
     feature_names = None
     feature_name_to_index = None
@@ -129,11 +128,11 @@ def train_and_score_rf_classifier(df, prepare_function, file_prefix, selector=No
         raise Exception("Both feature selection and feature extraction are selected. Both cannot be done")
 
     for num_t in num_trees:
-        scores[num_t] = []
-        max_scores[num_t] = 0
+        scores[num_t] = 0
         selected_features_dict[num_t] = None
 
     X_train, X_test, y_train, y_test = None, None, None, None
+
     if selector is None and extractor is None:
         X_train, X_test, y_train, y_test = prepare_function(df)
 
@@ -142,32 +141,39 @@ def train_and_score_rf_classifier(df, prepare_function, file_prefix, selector=No
 
         if selector is not None:
             estimator = RandomForestClassifier(n_estimators=num_t, random_state=67)
+
             X_train, X_test, y_train, y_test, selected_features, current_feature_names = prepare_function(df, estimator)
+
             feature_names = list(current_feature_names)
+
             if feature_name_to_index is None:
                 feature_name_to_index = {name: i for i, name in enumerate(feature_names)}
+
                 for existing_key in scores.keys():
                     selected_features_dict[existing_key] = [0] * len(feature_names)
 
         elif extractor is not None:
             X_train, X_test, y_train, y_test = prepare_function(df, k, 'linear')
 
-        acc = train_random_forest_classifier(X_train, X_test, y_train, y_test, num_t)
-        scores[num_t].append(acc)
+        acc = train_random_forest_classifier(
+            X_train,
+            X_test,
+            y_train,
+            y_test,
+            num_t
+        )
 
-        if acc > max_scores[num_t]:
-            max_scores[num_t] = acc
+        scores[num_t] = acc
 
         if selected_features is not None:
             for feature in selected_features:
                 selected_features_dict[num_t][feature_name_to_index[feature]] += 1
 
     with open(file_prefix + 'random_forest_classifier.csv', 'w') as f:
-        f.write('num_trees,avg_score,median_score,max_score,selected_features,feature_names\n')
+        f.write('num_trees,score,selected_features,feature_names\n')
+
         for num_t in num_trees:
-            avg_score = np.mean(scores[num_t])
-            median_score = np.median(scores[num_t])
-            max_score = max_scores[num_t]
+            score = scores[num_t]
             selected_features = selected_features_dict.get(num_t, None)
 
-            f.write(f"{num_t},{avg_score},{median_score},{max_score},{selected_features},{feature_names}\n")
+            f.write(f"{num_t},{score},{selected_features},{feature_names}\n")
